@@ -1,0 +1,24 @@
+{
+  "name": "rhythm-arena",
+  "version": "2.0.0",
+  "description": "Juego de ritmo multijugador por salas: beatmap automático desde tu propia música (FFT multibanda) y sincronización por Socket.io",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js",
+    "audit": "node tests/audit.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "canvas": "^3.2.3",
+    "jsdom": "^30.0.1",
+    "socket.io-client": "^4.7.5"
+  },
+  "license": "MIT"
+}

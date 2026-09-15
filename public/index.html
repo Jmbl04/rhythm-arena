@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<meta name="theme-color" content="#08060f" />
+<meta name="description" content="Juego de ritmo multijugador: elige personaje, sube tu música y toca en vivo con tus amigos." />
+<title>Rhythm Arena</title>
+<link rel="stylesheet" href="style.css" />
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎸</text></svg>" />
+</head>
+<body>
+
+<div id="toast-stack" class="toast-stack" aria-live="polite"></div>
+
+<!-- ============================ MENÚ PRINCIPAL ======================== -->
+<section id="screen-menu" class="screen active">
+  <div class="menu-bg"></div>
+  <div class="menu-wrap">
+    <header class="brand">
+      <h1 class="logo">RHYTHM<span>ARENA</span></h1>
+      <p class="tagline">Sube tu música · el juego crea la partitura · toca solo o con 3 amigos</p>
+    </header>
+
+    <nav class="menu-actions">
+      <button id="btn-menu-solo" class="menu-btn">
+        <span class="menu-ico">🎸</span>
+        <span class="menu-text"><b>Jugar solo</b><small>Tu música, tu récord</small></span>
+      </button>
+      <button id="btn-menu-multi" class="menu-btn">
+        <span class="menu-ico">🎤</span>
+        <span class="menu-text"><b>Multijugador</b><small>Salas de hasta 4 jugadores</small></span>
+      </button>
+      <button id="btn-menu-chars" class="menu-btn">
+        <span class="menu-ico">🧑‍🎤</span>
+        <span class="menu-text"><b>Personajes</b><small id="menu-char-name">Elige tu estrella</small></span>
+      </button>
+      <button id="btn-menu-options" class="menu-btn">
+        <span class="menu-ico">⚙️</span>
+        <span class="menu-text"><b>Opciones</b><small>Controles, audio y vida</small></span>
+      </button>
+    </nav>
+
+    <footer class="conn-state"><span id="conn-dot" class="dot"></span><span id="conn-text">Conectando…</span></footer>
+  </div>
+</section>
+
+<!-- ============================== SOLO ================================ -->
+<section id="screen-solo" class="screen">
+  <div class="page-wrap">
+    <div class="page-head">
+      <button class="btn btn-ghost btn-mini back" data-back="menu">← Menú</button>
+      <h2 class="page-title">Partida individual</h2>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h3 class="panel-title">Tu personaje</h3>
+        <div class="char-preview">
+          <canvas id="solo-char-canvas" width="240" height="280"></canvas>
+          <div>
+            <p id="solo-char-name" class="preview-name">—</p>
+            <p id="solo-char-role" class="muted tiny">—</p>
+            <button id="btn-solo-char" class="btn btn-ghost btn-mini" style="margin-top:12px">Cambiar</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 class="panel-title">Canción y dificultad</h3>
+        <label class="field" for="solo-audio">
+          <span>Archivo de audio (MP3 · WAV · OGG · M4A)</span>
+          <input id="solo-audio" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" />
+        </label>
+        <div class="field">
+          <span>Dificultad</span>
+          <div class="diff-group" data-group="solo">
+            <button type="button" class="diff" data-diff="easy">Fácil<small>4 carriles</small></button>
+            <button type="button" class="diff active" data-diff="normal">Normal<small>4 carriles</small></button>
+            <button type="button" class="diff" data-diff="hard">Difícil<small>5 carriles</small></button>
+            <button type="button" class="diff" data-diff="expert">Experto<small>6 carriles</small></button>
+          </div>
+        </div>
+        <div class="analysis">
+          <div class="progress"><div id="solo-bar" class="progress-fill"></div></div>
+          <p id="solo-text" class="muted tiny">Esperando archivo de audio…</p>
+        </div>
+        <button id="btn-solo-start" class="btn btn-primary btn-lg" disabled>Empezar</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =========================== MULTIJUGADOR =========================== -->
+<section id="screen-multi" class="screen">
+  <div class="page-wrap narrow">
+    <div class="page-head">
+      <button class="btn btn-ghost btn-mini back" data-back="menu">← Menú</button>
+      <h2 class="page-title">Multijugador</h2>
+    </div>
+
+    <div class="panel">
+      <label class="field" for="input-name">
+        <span>Tu nombre</span>
+        <input id="input-name" type="text" maxlength="14" placeholder="Jugador" autocomplete="nickname" />
+      </label>
+      <button id="btn-create" class="btn btn-primary btn-lg">Crear sala</button>
+      <div class="divider"><span>o únete con un código</span></div>
+      <div class="join-row">
+        <input id="input-code" class="code-input" type="text" maxlength="4" placeholder="CÓDIGO" autocomplete="off" spellcheck="false" aria-label="Código de sala" />
+        <button id="btn-join" class="btn btn-ghost">Entrar</button>
+      </div>
+      <p class="muted tiny" style="margin-top:16px">Comparte el código con tus amigos: todos arrancan la canción en el mismo instante.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================ PERSONAJES ============================ -->
+<section id="screen-characters" class="screen">
+  <div class="page-wrap wide">
+    <div class="page-head">
+      <button id="btn-char-back" class="btn btn-ghost btn-mini back" data-back="menu">← Volver</button>
+      <h2 class="page-title">Elige tu personaje</h2>
+      <span class="badge" id="char-count">15 disponibles</span>
+    </div>
+
+    <div class="char-layout">
+      <div class="char-grid" id="char-grid"></div>
+
+      <aside class="panel char-detail">
+        <canvas id="char-big" width="300" height="340"></canvas>
+        <h3 id="char-name">—</h3>
+        <p id="char-role" class="accent-text">—</p>
+        <p id="char-bio" class="muted tiny"></p>
+        <ul class="char-meta">
+          <li><span>Instrumento</span><b id="char-inst">—</b></li>
+          <li><span>Estado</span><b id="char-status">Disponible</b></li>
+        </ul>
+        <button id="btn-char-pick" class="btn btn-primary btn-lg">Elegir personaje</button>
+      </aside>
+    </div>
+  </div>
+</section>
+
+<!-- ============================== OPCIONES ============================ -->
+<section id="screen-options" class="screen">
+  <div class="page-wrap">
+    <div class="page-head">
+      <button class="btn btn-ghost btn-mini back" data-back="menu">← Menú</button>
+      <h2 class="page-title">Opciones</h2>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <h3 class="panel-title">Controles</h3>
+        <p class="muted tiny" style="margin-bottom:12px">Pulsa un carril y después la tecla que quieras asignar. Los carriles 5 y 6 solo se usan en Difícil y Experto.</p>
+        <ul id="key-list" class="key-list"></ul>
+        <div class="row-gap">
+          <button id="btn-keys-reset" class="btn btn-ghost btn-mini">Restaurar por defecto</button>
+          <span class="muted tiny">Las flechas ← ↓ ↑ → siempre valen para los 4 primeros carriles.</span>
+        </div>
+      </div>
+
+      <div class="panel">
+        <h3 class="panel-title">Audio y juego</h3>
+        <label class="field" for="input-offset">
+          <span>Ajuste de latencia: <b id="offset-value">0</b> ms</span>
+          <input id="input-offset" type="range" min="-300" max="300" step="5" value="0" />
+        </label>
+        <label class="field" for="input-volume">
+          <span>Volumen: <b id="volume-value">90</b>%</span>
+          <input id="input-volume" type="range" min="0" max="100" step="1" value="90" />
+        </label>
+
+        <label class="switch">
+          <input id="opt-progressive" type="checkbox" checked />
+          <span><b>Audio progresivo</b><small>La música solo suena si aciertas: al fallar se corta hasta que vuelvas a acertar.</small></span>
+        </label>
+        <label class="switch">
+          <input id="opt-health" type="checkbox" checked />
+          <span><b>Sistema de vida</b><small>Fallar baja la vida; al llegar a cero pierdes la partida.</small></span>
+        </label>
+        <label class="switch">
+          <input id="opt-stage" type="checkbox" checked />
+          <span><b>Escenario y personajes</b><small>Desactívalo si tu equipo va lento.</small></span>
+        </label>
+        <label class="switch">
+          <input id="opt-minis" type="checkbox" checked />
+          <span><b>Pantallas de los compañeros</b><small>Mira en vivo cómo va cada jugador en multijugador.</small></span>
+        </label>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== LOBBY ============================== -->
+<section id="screen-lobby" class="screen">
+  <div class="page-wrap wide">
+    <div class="lobby-head">
+      <div>
+        <p class="eyebrow">Código de sala</p>
+        <div class="room-code">
+          <span id="room-code">----</span>
+          <button id="btn-copy" class="btn btn-mini btn-ghost">Copiar</button>
+        </div>
+      </div>
+      <div class="row-gap">
+        <button id="btn-lobby-char" class="btn btn-ghost btn-mini">Cambiar personaje</button>
+        <button id="btn-leave" class="btn btn-danger btn-mini">Salir</button>
+      </div>
+    </div>
+
+    <div class="lobby-grid">
+      <div class="panel">
+        <h2 class="panel-title">Banda <span id="player-count" class="badge">0/4</span></h2>
+        <ul id="player-list" class="player-list"></ul>
+        <p class="muted tiny" style="margin-top:14px">Cada jugador elige su personaje y sus controles desde Opciones.</p>
+      </div>
+
+      <div class="panel">
+        <h2 class="panel-title">Canción y dificultad</h2>
+
+        <div id="host-controls">
+          <label class="field" for="input-audio">
+            <span>Archivo de audio (MP3 · WAV · OGG · M4A)</span>
+            <input id="input-audio" type="file" accept="audio/*,.mp3,.wav,.ogg,.m4a,.flac" />
+          </label>
+          <div class="field">
+            <span>Dificultad</span>
+            <div class="diff-group" data-group="room">
+              <button type="button" class="diff" data-diff="easy">Fácil<small>4 carriles</small></button>
+              <button type="button" class="diff active" data-diff="normal">Normal<small>4 carriles</small></button>
+              <button type="button" class="diff" data-diff="hard">Difícil<small>5 carriles</small></button>
+              <button type="button" class="diff" data-diff="expert">Experto<small>6 carriles</small></button>
+            </div>
+          </div>
+          <div class="analysis">
+            <div class="progress"><div id="analysis-bar" class="progress-fill"></div></div>
+            <p id="analysis-text" class="muted tiny">Esperando archivo de audio…</p>
+          </div>
+          <button id="btn-start" class="btn btn-primary btn-lg" disabled>Iniciar partida</button>
+        </div>
+
+        <div id="guest-controls" class="hidden">
+          <div class="waiting">
+            <div class="pulse-ring"></div>
+            <p>Esperando a que el anfitrión elija la canción…</p>
+            <p id="guest-song" class="muted tiny"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- =============================== JUEGO ============================== -->
+<section id="screen-game" class="screen">
+  <div class="game-wrap">
+    <aside class="side-panel">
+      <div class="song-info">
+        <p class="eyebrow">Reproduciendo</p>
+        <h3 id="game-song">—</h3>
+        <p id="game-diff" class="muted tiny">—</p>
+      </div>
+      <div class="time-bar"><div id="time-fill" class="time-fill"></div></div>
+      <h4 class="panel-title small">Marcador en vivo</h4>
+      <ul id="live-scores" class="live-scores"></ul>
+      <h4 class="panel-title small" id="minis-title">Pantallas de la banda</h4>
+      <div id="minis" class="minis"></div>
+      <p class="muted tiny hide-mobile" style="margin-top:12px">Pulsa <kbd>Esc</kbd> para abandonar la canción.</p>
+    </aside>
+
+    <main class="stage">
+      <div class="hud">
+        <div class="hud-item">
+          <span class="hud-label">Puntos</span>
+          <span id="hud-score" class="hud-value">0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Combo</span>
+          <span id="hud-combo" class="hud-value">x0</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Precisión</span>
+          <span id="hud-acc" class="hud-value">100%</span>
+        </div>
+        <div class="hud-item">
+          <span class="hud-label">Multiplicador</span>
+          <span id="hud-mult" class="hud-value">x1</span>
+        </div>
+        <div class="hud-item grow">
+          <span class="hud-label">Vida</span>
+          <div class="health-bar"><div id="health-fill" class="health-fill"></div></div>
+        </div>
+      </div>
+      <canvas id="track" aria-label="Pista de juego"></canvas>
+
+      <div id="overlay" class="overlay">
+        <div class="overlay-inner">
+          <h2 id="overlay-title">Preparando…</h2>
+          <p id="overlay-sub" class="muted"></p>
+        </div>
+      </div>
+
+      <div id="gameover" class="gameover hidden">
+        <div class="door door-left"></div>
+        <div class="door door-right"></div>
+        <div class="gameover-inner">
+          <h2 class="gameover-title">JUEGO TERMINADO</h2>
+          <p id="gameover-sub" class="muted">Te quedaste sin vida</p>
+          <div id="gameover-actions" class="row-gap center-row">
+            <button id="btn-retry" class="btn btn-primary">Reintentar</button>
+            <button id="btn-gameover-menu" class="btn btn-ghost">Menú principal</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</section>
+
+<!-- ============================ RESULTADOS =========================== -->
+<section id="screen-results" class="screen">
+  <div class="page-wrap">
+    <header class="results-head">
+      <p class="eyebrow">Resultados finales</p>
+      <h2 id="results-song">—</h2>
+      <p id="results-diff" class="muted tiny"></p>
+    </header>
+
+    <div id="podium" class="podium"></div>
+
+    <div class="table-scroll">
+      <table class="rank-table">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Jugador</th>
+            <th>Puntuación</th>
+            <th>Acertadas</th>
+            <th>Falladas</th>
+            <th>Combo máx.</th>
+            <th>Precisión</th>
+            <th class="hide-mobile">P / G / B</th>
+          </tr>
+        </thead>
+        <tbody id="rank-body"></tbody>
+      </table>
+    </div>
+
+    <div class="results-actions">
+      <button id="btn-lobby" class="btn btn-primary btn-lg">Volver al lobby</button>
+      <button id="btn-exit" class="btn btn-ghost">Menú principal</button>
+    </div>
+  </div>
+</section>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="engine.js"></script>
+<script src="characters.js"></script>
+<script src="game.js"></script>
+</body>
+</html>
