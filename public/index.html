@@ -6,7 +6,7 @@
 <meta name="theme-color" content="#08060f" />
 <meta name="description" content="Juego de ritmo multijugador: elige personaje, sube tu música y toca en vivo con tus amigos." />
 <title>Rhythm Arena</title>
-<link rel="stylesheet" href="style.css" />
+<link rel="stylesheet" href="style.css?v=4" />
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>🎸</text></svg>" />
 </head>
 <body>
@@ -15,7 +15,6 @@
 
 <!-- ============================ MENÚ PRINCIPAL ======================== -->
 <section id="screen-menu" class="screen active">
-  <div class="menu-bg"></div>
   <div class="menu-wrap">
     <header class="brand">
       <h1 class="logo">RHYTHM<span>ARENA</span></h1>
@@ -57,7 +56,7 @@
       <div class="panel">
         <h3 class="panel-title">Tu personaje</h3>
         <div class="char-preview">
-          <canvas id="solo-char-canvas" width="240" height="280"></canvas>
+          <img id="solo-char-canvas" width="240" height="280" style="object-fit: contain; background: #0b0813; border-radius: 8px;">
           <div>
             <p id="solo-char-name" class="preview-name">—</p>
             <p id="solo-char-role" class="muted tiny">—</p>
@@ -128,7 +127,7 @@
       <div class="char-grid" id="char-grid"></div>
 
       <aside class="panel char-detail">
-        <canvas id="char-big" width="300" height="340"></canvas>
+        <img id="char-big" width="300" height="340" style="object-fit: contain; background: #0b0813; border-radius: 12px; margin-bottom: 16px;">
         <h3 id="char-name">—</h3>
         <p id="char-role" class="accent-text">—</p>
         <p id="char-bio" class="muted tiny"></p>
@@ -153,11 +152,27 @@
     <div class="two-col">
       <div class="panel">
         <h3 class="panel-title">Controles</h3>
-        <p class="muted tiny" style="margin-bottom:12px">Pulsa un carril y después la tecla que quieras asignar. Los carriles 5 y 6 solo se usan en Difícil y Experto.</p>
-        <ul id="key-list" class="key-list"></ul>
-        <div class="row-gap">
+        <div class="row-gap" style="margin-bottom:12px">
+          <button id="tab-keyboard" class="btn btn-mini active" style="background:#fff; color:#000;">Teclado</button>
+          <button id="tab-gamepad" class="btn btn-ghost btn-mini">Mando</button>
+        </div>
+        <p class="muted tiny" style="margin-bottom:12px">Pulsa un carril y después la tecla o botón que quieras asignar. Los carriles 5 y 6 solo se usan en Difícil y Experto.</p>
+        
+        <div id="controls-keyboard">
+          <ul id="key-list" class="key-list"></ul>
+          <p class="muted tiny" style="margin-top:8px;">Las flechas ← ↓ ↑ → siempre valen para los 4 primeros carriles.</p>
+        </div>
+        
+        <div id="controls-gamepad" class="hidden">
+          <div style="display:flex; gap:16px; justify-content:center; margin-bottom:16px;">
+            <img src="assets/ps4.png" alt="PS4" style="height:60px; filter:invert(1) opacity(0.8);" />
+            <img src="assets/xbox.png" alt="Xbox" style="height:60px; filter:invert(1) opacity(0.8);" />
+          </div>
+          <ul id="pad-list" class="key-list"></ul>
+        </div>
+        
+        <div class="row-gap" style="margin-top:16px;">
           <button id="btn-keys-reset" class="btn btn-ghost btn-mini">Restaurar por defecto</button>
-          <span class="muted tiny">Las flechas ← ↓ ↑ → siempre valen para los 4 primeros carriles.</span>
         </div>
       </div>
 
@@ -355,8 +370,8 @@
 </section>
 
 <script src="/socket.io/socket.io.js"></script>
-<script src="engine.js"></script>
-<script src="characters.js"></script>
-<script src="game.js"></script>
+<script src="engine.js?v=4"></script>
+<script src="characters.js?v=4"></script>
+<script src="game_v5.js?v=5"></script>
 </body>
 </html>

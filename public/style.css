@@ -19,7 +19,6 @@
 
 html, body {
   height: 100%;
-  background: var(--bg);
   color: var(--text);
   font-family: var(--font);
   overflow: hidden;
@@ -31,10 +30,12 @@ body::before {
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(900px 620px at 12% -10%, rgba(0, 229, 255, 0.14), transparent 60%),
-    radial-gradient(760px 560px at 92% 8%, rgba(255, 45, 149, 0.14), transparent 62%),
-    linear-gradient(180deg, var(--bg), var(--bg-2));
-  z-index: -2;
+    radial-gradient(900px 620px at 12% -10%, rgba(0, 229, 255, 0.35), transparent 60%),
+    radial-gradient(760px 560px at 92% 8%, rgba(255, 45, 149, 0.35), transparent 62%),
+    linear-gradient(180deg, rgba(8, 6, 15, 0.6), rgba(15, 11, 29, 0.9)),
+    url("assets/stage-bg.jpg") center/cover no-repeat,
+    var(--bg);
+  z-index: -1;
 }
 
 .screen { display: none; height: 100%; width: 100%; overflow: auto; }
@@ -110,18 +111,6 @@ kbd {
 
 /* --------------------------- menú principal -------------------------- */
 #screen-menu { position: relative; }
-.menu-bg {
-  position: absolute; inset: 0;
-  background: url("assets/stage-bg.jpg") center 42% / cover no-repeat;
-  filter: saturate(1.1);
-}
-.menu-bg::after {
-  content: "";
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(900px 520px at 50% 25%, rgba(5, 3, 12, .25), rgba(5, 3, 12, .82) 70%),
-    linear-gradient(180deg, rgba(5, 3, 12, .72), rgba(5, 3, 12, .92));
-}
 .menu-wrap {
   position: relative; z-index: 1;
   min-height: 100%; display: flex; flex-direction: column;
@@ -188,7 +177,7 @@ kbd {
 
 /* ---------------------------- personajes ----------------------------- */
 .char-preview { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
-.char-preview canvas { border-radius: 14px; border: 1px solid var(--panel-line); background: #0b0813; }
+.char-preview img, .char-preview canvas { border-radius: 14px; border: 1px solid var(--panel-line); background: #0b0813; }
 .preview-name { font-size: 19px; font-weight: 800; }
 
 .char-layout { display: grid; grid-template-columns: 1fr 320px; gap: 18px; align-items: start; }
@@ -199,7 +188,7 @@ kbd {
   font-family: var(--font); color: var(--text); text-align: left;
   transition: transform .14s, border-color .2s, box-shadow .2s;
 }
-.char-card canvas { display: block; width: 100%; height: auto; }
+.char-card img { display: block; width: 100%; height: auto; object-fit: cover; aspect-ratio: 132/150; }
 .char-card .cc-name { display: block; padding: 8px 10px 4px; font-size: 13px; font-weight: 800; }
 .char-card .cc-role { display: block; padding: 0 10px 10px; font-size: 10.5px; color: var(--muted); }
 .char-card:hover { transform: translateY(-4px); border-color: rgba(0, 229, 255, .5); }
@@ -211,7 +200,7 @@ kbd {
 }
 .char-card.selected .cc-flag { color: var(--c3); border-color: rgba(255, 212, 0, .5); }
 .char-detail { position: sticky; top: 18px; display: grid; gap: 8px; justify-items: center; text-align: center; }
-.char-detail canvas { border-radius: 14px; width: 100%; height: auto; background: #0b0813; border: 1px solid var(--panel-line); }
+.char-detail img, .char-detail canvas { border-radius: 14px; width: 100%; height: auto; background: #0b0813; border: 1px solid var(--panel-line); object-fit: contain; }
 .char-detail h3 { font-size: 20px; }
 .char-meta { list-style: none; width: 100%; display: grid; gap: 6px; margin: 6px 0 10px; }
 .char-meta li { display: flex; justify-content: space-between; font-size: 12px; padding: 7px 10px; border-radius: 10px; background: rgba(255, 255, 255, .05); }

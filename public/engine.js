@@ -386,6 +386,25 @@
           }
           if (dt + 1e-9 >= cfg.minGap) { notes.push(n); chordSize = 1; }
         });
+      /* Generar notas largas automáticamente */
+      for (var i = 0; i < notes.length; i++) {
+        var curr = notes[i];
+        var nextT = duration - 0.5;
+        for (var j = i + 1; j < notes.length; j++) {
+          if (notes[j].lane === curr.lane) {
+            nextT = notes[j].t;
+            break;
+          }
+        }
+        var gap = nextT - curr.t;
+        if (gap > 0.6) {
+          var holdDuration = gap - 0.2;
+          if (holdDuration > 2.5) holdDuration = 2.5;
+          if (holdDuration >= 0.4) {
+             curr.duration = Math.round(holdDuration * 1000) / 1000;
+          }
+        }
+      }
 
       onProgress(1);
       return {

@@ -272,9 +272,10 @@
         (ch.id === S.characterId ? ' selected' : '') +
         (taken[ch.id] ? ' taken' : '');
       card.dataset.id = ch.id;
-      var cv = document.createElement('canvas');
-      cv.width = 132; cv.height = 150;
-      card.appendChild(cv);
+      var img = document.createElement('img');
+      var chIndex = RC.ROSTER.findIndex(function(c) { return c.id === ch.id; }) + 1;
+      img.src = 'assets/Persojanes/' + chIndex + '.png';
+      card.appendChild(img);
       var flag = document.createElement('span');
       flag.className = 'cc-flag';
       flag.textContent = ch.id === S.characterId ? 'Tuyo' : (taken[ch.id] ? 'Ocupado' : 'Libre');
@@ -289,9 +290,10 @@
         if (taken[ch.id]) { toast(taken[ch.id] + ' ya eligió a ' + ch.name, 'error'); return; }
         charAnim.previewId = ch.id;
         showCharacterDetail(ch.id);
+        startCharAnim();
       });
       grid.appendChild(card);
-      RC.drawPortrait(cv.getContext('2d'), ch, cv.width, cv.height, Math.random() * 3, { full: true, energy: 0.5 });
+      // Removed RC.drawPortrait
     });
     $('char-count').textContent = RC.ROSTER.length + ' disponibles';
     charAnim.previewId = charAnim.previewId || S.characterId;
@@ -315,23 +317,17 @@
   }
 
   function startCharAnim() {
-    cancelAnimationFrame(charAnim.raf);
     var big = $('char-big');
-    var ctx = big.getContext('2d');
-    var last = performance.now();
-    (function step(now) {
-      if (!isActive('characters')) return;
-      charAnim.t += (now - last) / 1000;
-      last = now;
-      RC.drawPortrait(ctx, RC.get(charAnim.previewId), big.width, big.height, charAnim.t, { full: true, energy: 0.7 });
-      charAnim.raf = requestAnimationFrame(step);
-    })(last);
+    var ch = RC.get(charAnim.previewId);
+    var chIndex = RC.ROSTER.findIndex(function(c) { return c.id === ch.id; }) + 1;
+    big.src = 'assets/Persojanes/' + chIndex + '.png';
   }
 
   function drawSoloPreview() {
-    var cv = $('solo-char-canvas');
+    var img = $('solo-char-canvas');
     var ch = RC.get(S.characterId);
-    RC.drawPortrait(cv.getContext('2d'), ch, cv.width, cv.height, performance.now() / 1000, { full: true, energy: 0.6 });
+    var chIndex = RC.ROSTER.findIndex(function(c) { return c.id === ch.id; }) + 1;
+    img.src = 'assets/Persojanes/' + chIndex + '.png';
     $('solo-char-name').textContent = ch.name;
     $('solo-char-role').textContent = ch.role + ' · ' + ch.bio;
   }
@@ -351,33 +347,59 @@
   /* ------------------------------ opciones ----------------------------- */
 
   var listening = -1;
+  var listeningType = '';
 
   function renderKeyList() {
-    var list = $('key-list');
-    list.innerHTML = '';
+    var keyList = $('key-list');
+    var padList = $('pad-list');
+    if (!padList) return;
+    keyList.innerHTML = '';
+    padList.innerHTML = '';
     for (var i = 0; i < MAX_LANES; i++) {
       (function (lane) {
-        var li = document.createElement('li');
-        li.className = 'key-row';
-        li.innerHTML =
+        var labelHTML =
           '<span class="key-dot" style="background:' + LANE_COLORS[lane] + ';color:' + LANE_COLORS[lane] + '"></span>' +
           '<span class="key-label">Carril ' + (lane + 1) +
           '<small>' + (lane < 4 ? 'Todas las dificultades' : (lane === 4 ? 'Difícil y Experto' : 'Solo Experto')) + '</small></span>';
-        var btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'key-btn' + (listening === lane ? ' listening' : '');
-        btn.textContent = listening === lane ? 'Pulsa tecla o mando…' : (keyLabel(OPT.keys[lane]) + ' / ' + padLabel(OPT.gamepad[lane]));
-        btn.addEventListener('click', function () {
-          listening = listening === lane ? -1 : lane;
+
+        // Keyboard Row
+        var keyLi = document.createElement('li');
+        keyLi.className = 'key-row';
+        keyLi.innerHTML = labelHTML;
+        var keyBtn = document.createElement('button');
+        keyBtn.type = 'button';
+        keyBtn.className = 'key-btn' + (listening === lane && listeningType === 'key' ? ' listening' : '');
+        keyBtn.textContent = (listening === lane && listeningType === 'key') ? 'Pulsa tecla…' : keyLabel(OPT.keys[lane]);
+        keyBtn.addEventListener('click', function () {
+          listening = (listening === lane && listeningType === 'key') ? -1 : lane;
+          listeningType = 'key';
           renderKeyList();
         });
-        li.appendChild(btn);
-        list.appendChild(li);
+        keyLi.appendChild(keyBtn);
+        keyList.appendChild(keyLi);
+
+        // Gamepad Row
+        var padLi = document.createElement('li');
+        padLi.className = 'key-row';
+        padLi.innerHTML = labelHTML;
+        var padBtn = document.createElement('button');
+        padBtn.type = 'button';
+        padBtn.className = 'key-btn' + (listening === lane && listeningType === 'pad' ? ' listening' : '');
+        padBtn.textContent = (listening === lane && listeningType === 'pad') ? 'Pulsa botón…' : padLabel(OPT.gamepad[lane]);
+        padBtn.addEventListener('click', function () {
+          listening = (listening === lane && listeningType === 'pad') ? -1 : lane;
+          listeningType = 'pad';
+          renderKeyList();
+        });
+        padLi.appendChild(padBtn);
+        padList.appendChild(padLi);
+
       })(i);
     }
   }
 
   function assignKey(lane, code) {
+    if (listeningType !== 'key') return;
     for (var i = 0; i < OPT.keys.length; i++) if (OPT.keys[i] === code && i !== lane) OPT.keys[i] = null;
     OPT.keys[lane] = code;
     save('ra_keys', OPT.keys);
@@ -387,6 +409,7 @@
   }
 
   function assignGamepad(lane, index) {
+    if (listeningType !== 'pad') return;
     for (var i = 0; i < OPT.gamepad.length; i++) if (OPT.gamepad[i] === index && i !== lane) OPT.gamepad[i] = null;
     OPT.gamepad[lane] = index;
     save('ra_gamepad', OPT.gamepad);
@@ -664,89 +687,208 @@
     c.clearRect(0, 0, view.w, view.h);
 
     if (OPT.stage) {
-      RC.drawStage(c, view.w, view.h, {
-        t: t,
-        energy: G.dead ? 0.05 : Math.min(1, 0.2 + G.combo / 45 + (G.musicOn ? 0.15 : 0)),
-        accent: LANE_COLORS[1],
-        horizon: view.h * 0.70
-      });
       drawBand(c, t);
     } else {
       c.fillStyle = '#0a0714';
       c.fillRect(0, 0, view.w, view.h);
     }
 
-    // pista translúcida sobre el escenario
-    var bg = c.createLinearGradient(0, 0, 0, view.h);
-    bg.addColorStop(0, 'rgba(4,3,10,0.30)');
-    bg.addColorStop(1, 'rgba(4,3,10,0.82)');
-    c.fillStyle = bg;
-    c.fillRect(view.trackX, 0, view.trackW, view.h);
+    var horizonY = view.h * 0.20; 
+    var hitY = view.hitY;
+    var trackWTop = view.trackW * 0.15; 
+    var trackWBottom = view.trackW * 1.5;
 
-    c.strokeStyle = 'rgba(255,255,255,0.10)';
-    c.lineWidth = 1;
+    function proj(dt, lane) {
+      var z = dt / cfg.approach; 
+      var yPct = 1 - z;
+      var y = horizonY + yPct * (hitY - horizonY);
+      var tw = trackWTop + yPct * (trackWBottom - trackWTop);
+      var tx = view.w / 2 - tw / 2;
+      var lw = tw / G.lanes;
+      var x = tx + lane * lw;
+      return { x: x, y: y, w: lw, tx: tx, tw: tw };
+    }
+
+    // pista translúcida trapezoidal
+    var bg = c.createLinearGradient(0, horizonY, 0, view.h);
+    bg.addColorStop(0, 'rgba(4,3,10,0.40)');
+    bg.addColorStop(1, 'rgba(4,3,10,0.88)');
+    c.fillStyle = bg;
+    c.beginPath();
+    var pTop = proj(cfg.approach, 0);
+    var pBot = proj(0, 0);
+    c.moveTo(pTop.tx, horizonY);
+    c.lineTo(pTop.tx + pTop.tw, horizonY);
+    c.lineTo(pBot.tx + pBot.tw, view.h);
+    c.lineTo(pBot.tx, view.h);
+    c.fill();
+
+    c.strokeStyle = 'rgba(255,255,255,0.15)';
+    c.lineWidth = 1.5;
     for (i = 0; i <= G.lanes; i++) {
-      var x = view.trackX + i * view.laneW;
-      c.beginPath(); c.moveTo(x, 0); c.lineTo(x, view.h); c.stroke();
+      var p1 = proj(cfg.approach, i);
+      var p2 = proj(-0.5, i);
+      c.beginPath(); c.moveTo(p1.x, p1.y); c.lineTo(p2.x, p2.y); c.stroke();
     }
 
     for (i = 0; i < G.lanes; i++) {
       var life = Math.max(0, 1 - (now - G.laneFlash[i]) / 260);
       if (life <= 0 && !G.laneHold[i]) continue;
-      var alpha = Math.max(life * 0.22, G.laneHold[i] ? 0.09 : 0);
-      var g = c.createLinearGradient(0, view.hitY - 280, 0, view.hitY);
-      g.addColorStop(0, 'rgba(0,0,0,0)');
-      g.addColorStop(1, hexA(LANE_COLORS[i], alpha));
-      c.fillStyle = g;
-      c.fillRect(view.trackX + i * view.laneW + 1, view.hitY - 280, view.laneW - 2, 280);
+      var alpha = Math.max(life * 0.22, G.laneHold[i] ? 0.15 : 0);
+      var ptTop = proj(cfg.approach * 0.6, i);
+      var ptBot = proj(0, i);
+      var gl = c.createLinearGradient(0, ptTop.y, 0, ptBot.y);
+      gl.addColorStop(0, 'rgba(0,0,0,0)');
+      gl.addColorStop(1, hexA(LANE_COLORS[i], alpha));
+      c.fillStyle = gl;
+      c.beginPath();
+      c.moveTo(ptTop.x + 1, ptTop.y);
+      c.lineTo(ptTop.x + ptTop.w - 1, ptTop.y);
+      c.lineTo(ptBot.x + ptBot.w - 1, ptBot.y);
+      c.lineTo(ptBot.x + 1, ptBot.y);
+      c.fill();
     }
 
     c.save();
     c.shadowBlur = 18; c.shadowColor = 'rgba(255,255,255,.65)';
     c.strokeStyle = 'rgba(255,255,255,.85)'; c.lineWidth = 3;
-    c.beginPath(); c.moveTo(view.trackX, view.hitY); c.lineTo(view.trackX + view.trackW, view.hitY); c.stroke();
+    c.beginPath(); c.moveTo(pBot.tx, view.hitY); c.lineTo(pBot.tx + pBot.tw, view.hitY); c.stroke();
     c.restore();
 
-    var recH = Math.min(52, view.laneW * 0.9);
     for (i = 0; i < G.lanes; i++) {
-      var rx = view.trackX + i * view.laneW + 5, rw = view.laneW - 10;
+      var pr = proj(0, i);
       var fl = Math.max(0, 1 - (now - G.laneFlash[i]) / 200);
+      var col = LANE_COLORS[i];
+      
+      var targetW = pr.w * 0.75;
+      var targetH = targetW * 0.35;
+      var nx = pr.x + pr.w / 2;
+      var ny = pr.y;
+
       c.save();
-      c.strokeStyle = hexA(LANE_COLORS[i], 0.55 + fl * 0.45);
-      c.lineWidth = 2 + fl * 2;
-      c.fillStyle = hexA(LANE_COLORS[i], 0.08 + fl * 0.32);
-      roundRect(c, rx, view.hitY - recH / 2, rw, recH, 12);
-      c.fill(); c.stroke();
+      
+      if (fl > 0) {
+        c.shadowBlur = 20 * fl;
+        c.shadowColor = col;
+      }
+      
+      // Base (grosor) de la diana
+      c.fillStyle = hexA(col, 0.15);
+      c.beginPath();
+      c.ellipse(nx, ny + targetW * 0.08, targetW / 2, targetH / 2, 0, 0, Math.PI * 2);
+      c.fill();
+      
+      // Anillo superior de la diana
+      c.strokeStyle = hexA(col, 0.5 + fl * 0.5);
+      c.lineWidth = 3 + fl * 3;
+      c.fillStyle = hexA(col, 0.05 + fl * 0.3);
+      c.beginPath();
+      c.ellipse(nx, ny, targetW / 2, targetH / 2, 0, 0, Math.PI * 2);
+      c.fill();
+      c.stroke();
+      
       c.restore();
+
       c.fillStyle = hexA('#ffffff', 0.5 + fl * 0.5);
-      c.font = '700 ' + Math.max(11, Math.min(16, view.laneW * 0.28)) + 'px ' + fontFamily;
+      c.font = '700 ' + Math.max(11, Math.min(16, pr.w * 0.28)) + 'px ' + fontFamily;
       c.textAlign = 'center'; c.textBaseline = 'middle';
       var text = keyLabel(OPT.keys[i]);
       if (OPT.gamepad[i] != null) text += ' / ' + padLabel(OPT.gamepad[i]);
-      c.fillText(text, rx + rw / 2, view.hitY);
+      c.fillText(text, nx, pr.y);
     }
 
-    var noteH = 20;
+    var endIndex = G.cursor;
     for (i = G.cursor; i < G.notes.length; i++) {
+      if (G.notes[i].t - songTime > cfg.approach + 0.35) break;
+      endIndex = i;
+    }
+
+    for (i = endIndex; i >= G.cursor; i--) {
       var n = G.notes[i];
       var dt = n.t - songTime;
-      if (dt > cfg.approach + 0.35) break;
-      if (n.judged) continue;
-      var y = view.hitY - dt * pxPerSec;
-      if (y < -50) continue;
-      var nx = view.trackX + n.lane * view.laneW + 7, nw = view.laneW - 14;
+      var isHold = n.duration > 0;
+      var holdEndDt = isHold ? (n.t + n.duration - songTime) : dt;
+
+      if (n.judged && !isHold) continue;
+      if (n.judged && isHold && holdEndDt < 0) continue;
+
+      var headDt = n.judged ? 0 : Math.max(0, dt);
+      var tailDt = Math.min(cfg.approach, holdEndDt);
+      if (tailDt < 0) continue;
+
+      var pH = proj(headDt, n.lane);
+      var pT = proj(tailDt, n.lane);
       var color = LANE_COLORS[n.lane];
-      c.save();
-      c.shadowBlur = 16; c.shadowColor = color;
-      var ng = c.createLinearGradient(0, y - noteH / 2, 0, y + noteH / 2);
-      ng.addColorStop(0, hexA(color, 0.98));
-      ng.addColorStop(1, hexA(color, 0.55));
-      c.fillStyle = ng;
-      roundRect(c, nx, y - noteH / 2, nw, noteH, 7);
-      c.fill();
-      c.restore();
-      c.fillStyle = 'rgba(255,255,255,.7)';
-      c.fillRect(nx + 5, y - noteH / 2 + 3, nw - 10, 2);
+
+      if (isHold) {
+         c.save();
+         var alpha = n.holding ? 0.8 : 0.4;
+         var hwStart = pH.w * 0.2; 
+         var hwEnd = pT.w * 0.2;   
+         var nxStart = pH.x + pH.w / 2;
+         var nxEnd = pT.x + pT.w / 2;
+         
+         c.shadowBlur = 10; 
+         c.shadowColor = color;
+         c.fillStyle = hexA(color, alpha);
+         c.beginPath();
+         c.moveTo(nxStart - hwStart, pH.y);
+         c.lineTo(nxEnd - hwEnd, pT.y);
+         c.lineTo(nxEnd + hwEnd, pT.y);
+         c.lineTo(nxStart + hwStart, pH.y);
+         c.fill();
+         c.restore();
+      }
+
+      if (!n.judged) {
+        var noteW = pH.w * 0.75; 
+        var noteH = noteW * 0.35; 
+        var thickness = noteW * 0.15; 
+        var nx = pH.x + pH.w / 2; 
+        var ny = pH.y; 
+        
+        c.save();
+        c.shadowBlur = 12; 
+        c.shadowColor = color;
+        
+        // Base oscura / Lado del cilindro 3D
+        c.fillStyle = hexA(color, 0.5);
+        c.beginPath();
+        c.ellipse(nx, ny + thickness, Math.max(0.1, Math.abs(noteW / 2)), Math.max(0.1, Math.abs(noteH / 2)), 0, 0, Math.PI * 2);
+        c.fill();
+        
+        c.beginPath();
+        c.moveTo(nx - noteW / 2, ny);
+        c.lineTo(nx - noteW / 2, ny + thickness);
+        c.lineTo(nx + noteW / 2, ny + thickness);
+        c.lineTo(nx + noteW / 2, ny);
+        c.fill();
+        
+        // Anillo exterior de color
+        var ringW = noteW * 0.22;
+        c.lineWidth = Math.max(0.1, Math.abs(ringW));
+        c.strokeStyle = color;
+        c.beginPath();
+        c.ellipse(nx, ny, Math.max(0.1, Math.abs((noteW - ringW) / 2)), Math.max(0.1, Math.abs((noteH - ringW) / 2)), 0, 0, Math.PI * 2);
+        c.stroke();
+        
+        // Interior oscuro de la nota
+        c.shadowBlur = 0;
+        c.fillStyle = '#111';
+        c.beginPath();
+        c.ellipse(nx, ny, Math.max(0.1, Math.abs((noteW - ringW * 2) / 2)), Math.max(0.1, Math.abs((noteH - ringW * 2 * 0.35) / 2)), 0, 0, Math.PI * 2);
+        c.fill();
+        
+        // Centro blanco brillante
+        c.shadowBlur = 12; 
+        c.shadowColor = '#fff';
+        c.fillStyle = '#fff';
+        c.beginPath();
+        c.ellipse(nx, ny, Math.max(0.1, Math.abs((noteW - ringW * 2.8) / 2)), Math.max(0.1, Math.abs((noteH - ringW * 2.8 * 0.35) / 2)), 0, 0, Math.PI * 2);
+        c.fill();
+        
+        c.restore();
+      }
     }
 
     for (i = G.particles.length - 1; i >= 0; i--) {
@@ -889,10 +1031,33 @@
       var d = n.t - t;
       if (Math.abs(d) <= MISS_WINDOW && Math.abs(d) < Math.abs(bestDelta)) { best = n; bestDelta = d; }
     }
-    if (best) applyJudge(best, bestDelta);
+    if (best) {
+      applyJudge(best, bestDelta);
+      if (best.duration > 0) {
+        best.holding = true;
+        G.laneHoldNote[lane] = best;
+      }
+    } else {
+      if (OPT.health && t > 1.0) {
+        G.health = Math.max(0, G.health - 2);
+        updateHud();
+        if (G.health <= 0) playerDied();
+      }
+    }
   }
 
-  function releaseLane(lane) { if (lane >= 0 && lane < G.lanes) G.laneHold[lane] = false; }
+  function releaseLane(lane) { 
+    if (lane >= 0 && lane < G.lanes) {
+      if (G.laneHold) G.laneHold[lane] = false; 
+      if (G.laneHoldNote) {
+        var hn = G.laneHoldNote[lane];
+        if (hn) {
+          hn.holding = false;
+          G.laneHoldNote[lane] = null;
+        }
+      }
+    }
+  }
 
   function sendProgress(force) {
     if (S.mode !== 'multi' || !S.socket || !S.socket.connected) return;
@@ -908,15 +1073,35 @@
   function loop() {
     if (!G.running) return;
     var t = songTimeNow();
+    var now = performance.now();
 
-    while (G.cursor < G.notes.length &&
-           (G.notes[G.cursor].judged || G.notes[G.cursor].t < t - MISS_WINDOW)) {
+    while (G.cursor < G.notes.length) {
       var n = G.notes[G.cursor];
-      if (!n.judged) {
-        if (G.dead) n.judged = true;   // eliminado: ya no cuenta fallos
+      var endTime = n.t + (n.duration || 0);
+      if (n.judged && t > endTime) {
+        G.cursor++;
+      } else if (!n.judged && t > n.t + MISS_WINDOW) {
+        if (G.dead) n.judged = true;
         else registerMiss(n);
+        G.cursor++;
+      } else {
+        break;
       }
-      G.cursor++;
+    }
+
+    for (var i = 0; i < G.lanes; i++) {
+      var hn = G.laneHoldNote[i];
+      if (hn && hn.holding) {
+        if (now - (hn.lastTick || 0) > 100) {
+          G.score += 5 * RA.multiplier(G.combo);
+          hn.lastTick = now;
+          updateHud();
+        }
+        if (t >= hn.t + hn.duration) {
+          hn.holding = false;
+          G.laneHoldNote[i] = null;
+        }
+      }
     }
 
     drawFrame(t);
@@ -948,8 +1133,10 @@
     G.perfect = 0; G.great = 0; G.good = 0;
     G.health = RA.HEALTH.start;
     G.popups = []; G.particles = [];
-    G.laneFlash = []; G.laneHold = [];
-    for (var i = 0; i < MAX_LANES; i++) { G.laneFlash.push(0); G.laneHold.push(false); }
+    G.laneFlash = []; G.laneHold = []; G.laneHoldNote = [];
+    for (var i = 0; i < MAX_LANES; i++) { 
+      G.laneFlash.push(0); G.laneHold.push(false); G.laneHoldNote.push(null);
+    }
     G.pressMask = 0;
     G.musicOn = true;
     updateHud();
@@ -1066,8 +1253,15 @@
     data.ranking.slice(0, 4).forEach(function (p, i) {
       var card = document.createElement('div');
       card.className = 'podium-card' + (i === 0 && !p.dead ? ' first' : '');
-      var cv = document.createElement('canvas');
-      cv.width = 120; cv.height = 130;
+      var cv = document.createElement('img');
+      var ch = typeof p.character === 'string' ? RC.get(p.character) : p.character;
+      var chIndex = ch ? (RC.ROSTER.findIndex(function(c) { return c.id === ch.id; }) + 1) : 1;
+      cv.src = 'assets/Persojanes/' + chIndex + '.png';
+      cv.style.width = '120px';
+      cv.style.height = '130px';
+      cv.style.objectFit = 'contain';
+      cv.style.borderRadius = '12px';
+      cv.style.background = '#0b0813';
       card.appendChild(cv);
       var info = document.createElement('div');
       info.innerHTML =
@@ -1077,8 +1271,6 @@
         '<div class="podium-sub">' + (p.dead ? 'Eliminado · ' : '') + 'Combo x' + p.maxCombo + ' · ' + p.accuracy + '%</div>';
       card.appendChild(info);
       podium.appendChild(card);
-      RC.drawPortrait(cv.getContext('2d'), RC.get(p.character), cv.width, cv.height, i * 0.5,
-        { full: true, energy: p.dead ? 0.1 : 0.7, state: p.dead ? 'miss' : 'play' });
     });
 
     var body = $('rank-body');
@@ -1106,7 +1298,7 @@
   /* -------------------------------- input ------------------------------ */
 
   document.addEventListener('keydown', function (e) {
-    if (listening >= 0 && isActive('options')) {
+    if (listening >= 0 && listeningType === 'key' && isActive('options')) {
       e.preventDefault();
       if (e.code === 'Escape') { listening = -1; renderKeyList(); return; }
       assignKey(listening, e.code);
@@ -1135,7 +1327,7 @@
       for (var b = 0; b < p.buttons.length; b++) {
         var pressed = p.buttons[b].pressed;
         if (pressed && !lastGamepadState[i][b]) {
-          if (listening >= 0 && isActive('options')) {
+          if (listening >= 0 && listeningType === 'pad' && isActive('options')) {
             assignGamepad(listening, b);
           } else if (isActive('game') && G.running) {
             var lane = laneForGamepad(b);
@@ -1395,6 +1587,29 @@
   });
 
   // opciones
+  if ($('tab-keyboard')) {
+    $('tab-keyboard').addEventListener('click', function () {
+      $('tab-keyboard').classList.add('active');
+      $('tab-keyboard').style.background = '#fff';
+      $('tab-keyboard').style.color = '#000';
+      $('tab-gamepad').classList.remove('active');
+      $('tab-gamepad').style.background = '';
+      $('tab-gamepad').style.color = '';
+      $('controls-keyboard').classList.remove('hidden');
+      $('controls-gamepad').classList.add('hidden');
+    });
+    $('tab-gamepad').addEventListener('click', function () {
+      $('tab-gamepad').classList.add('active');
+      $('tab-gamepad').style.background = '#fff';
+      $('tab-gamepad').style.color = '#000';
+      $('tab-keyboard').classList.remove('active');
+      $('tab-keyboard').style.background = '';
+      $('tab-keyboard').style.color = '';
+      $('controls-gamepad').classList.remove('hidden');
+      $('controls-keyboard').classList.add('hidden');
+    });
+  }
+
   $('input-offset').value = OPT.offsetMs;
   $('offset-value').textContent = OPT.offsetMs;
   $('input-volume').value = OPT.volume;
