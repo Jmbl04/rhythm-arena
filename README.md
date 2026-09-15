@@ -35,7 +35,7 @@ npm start
 Variables opcionales: `PORT`, `HOST`, `PUBLIC_DIR`.
 
 Para jugar desde otros dispositivos de la misma red, usa la IP local del anfitrión
-(`http://192.168.x.x:3000`).
+(`http://192.168.1.9:3000`).
 
 ## Menú
 

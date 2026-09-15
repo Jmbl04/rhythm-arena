@@ -17,6 +17,7 @@
   var MAX_LANES = RA.MAX_LANES;
   var LANE_COLORS = ['#00e5ff', '#ff2d95', '#ffd400', '#7cff4d', '#ff8a3d', '#b46bff'];
   var DEFAULT_KEYS = ['KeyA', 'KeyS', 'KeyD', 'KeyF', 'KeyG', 'KeyH'];
+  var DEFAULT_GAMEPAD = [14, 13, 12, 15, 4, 5];
   var ARROWS = { ArrowLeft: 0, ArrowDown: 1, ArrowUp: 2, ArrowRight: 3 };
   var TAIL_SECONDS = 2.0;
 
@@ -31,6 +32,17 @@
       ShiftRight: 'MAYÚS der', ControlLeft: 'CTRL izq', ControlRight: 'CTRL der'
     };
     return map[code] || code.toUpperCase();
+  }
+
+  function padLabel(index) {
+    if (index == null) return '—';
+    var map = {
+      0: 'A/Cruz', 1: 'B/Cír', 2: 'X/Cua', 3: 'Y/Tri',
+      4: 'LB/L1', 5: 'RB/R1', 6: 'LT/L2', 7: 'RT/R2',
+      8: 'Share', 9: 'Option', 10: 'L3', 11: 'R3',
+      12: 'D-Pad ↑', 13: 'D-Pad ↓', 14: 'D-Pad ←', 15: 'D-Pad →'
+    };
+    return map[index] || ('Mando ' + index);
   }
 
   /* ------------------------------ ajustes ------------------------------ */
@@ -52,6 +64,11 @@
       var k = loadJSON('ra_keys', null);
       if (!Array.isArray(k) || k.length !== MAX_LANES) return DEFAULT_KEYS.slice();
       return k;
+    })(),
+    gamepad: (function () {
+      var g = loadJSON('ra_gamepad', null);
+      if (!Array.isArray(g) || g.length !== MAX_LANES) return DEFAULT_GAMEPAD.slice();
+      return g;
     })(),
     offsetMs: Number(localStorage.getItem('ra_offset') || 0),
     volume: Number(localStorage.getItem('ra_volume') || 90),
@@ -349,7 +366,7 @@
         var btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'key-btn' + (listening === lane ? ' listening' : '');
-        btn.textContent = listening === lane ? 'Pulsa…' : keyLabel(OPT.keys[lane]);
+        btn.textContent = listening === lane ? 'Pulsa tecla o mando…' : (keyLabel(OPT.keys[lane]) + ' / ' + padLabel(OPT.gamepad[lane]));
         btn.addEventListener('click', function () {
           listening = listening === lane ? -1 : lane;
           renderKeyList();
@@ -369,9 +386,23 @@
     toast('Carril ' + (lane + 1) + ' → ' + keyLabel(code), 'ok');
   }
 
+  function assignGamepad(lane, index) {
+    for (var i = 0; i < OPT.gamepad.length; i++) if (OPT.gamepad[i] === index && i !== lane) OPT.gamepad[i] = null;
+    OPT.gamepad[lane] = index;
+    save('ra_gamepad', OPT.gamepad);
+    listening = -1;
+    renderKeyList();
+    toast('Carril ' + (lane + 1) + ' → ' + padLabel(index), 'ok');
+  }
+
   function laneForKey(code) {
     for (var i = 0; i < G.lanes; i++) if (OPT.keys[i] === code) return i;
     if (G.lanes === 4 && ARROWS[code] !== undefined) return ARROWS[code];
+    return -1;
+  }
+
+  function laneForGamepad(index) {
+    for (var i = 0; i < G.lanes; i++) if (OPT.gamepad[i] === index) return i;
     return -1;
   }
 
@@ -690,7 +721,9 @@
       c.fillStyle = hexA('#ffffff', 0.5 + fl * 0.5);
       c.font = '700 ' + Math.max(11, Math.min(16, view.laneW * 0.28)) + 'px ' + fontFamily;
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText(keyLabel(OPT.keys[i]), rx + rw / 2, view.hitY);
+      var text = keyLabel(OPT.keys[i]);
+      if (OPT.gamepad[i] != null) text += ' / ' + padLabel(OPT.gamepad[i]);
+      c.fillText(text, rx + rw / 2, view.hitY);
     }
 
     var noteH = 20;
@@ -1092,6 +1125,35 @@
     if (lane >= 0) releaseLane(lane);
   });
 
+  var lastGamepadState = [];
+  function pollGamepads() {
+    var pads = navigator.getGamepads ? navigator.getGamepads() : [];
+    for (var i = 0; i < pads.length; i++) {
+      var p = pads[i];
+      if (!p) continue;
+      if (!lastGamepadState[i]) lastGamepadState[i] = [];
+      for (var b = 0; b < p.buttons.length; b++) {
+        var pressed = p.buttons[b].pressed;
+        if (pressed && !lastGamepadState[i][b]) {
+          if (listening >= 0 && isActive('options')) {
+            assignGamepad(listening, b);
+          } else if (isActive('game') && G.running) {
+            var lane = laneForGamepad(b);
+            if (lane >= 0) pressLane(lane);
+          }
+        } else if (!pressed && lastGamepadState[i][b]) {
+          if (isActive('game')) {
+            var lane = laneForGamepad(b);
+            if (lane >= 0) releaseLane(lane);
+          }
+        }
+        lastGamepadState[i][b] = pressed;
+      }
+    }
+    requestAnimationFrame(pollGamepads);
+  }
+  requestAnimationFrame(pollGamepads);
+
   function laneFromPointer(e) {
     var rect = canvas.getBoundingClientRect();
     var x = (e.clientX - rect.left) - view.trackX;
@@ -1363,6 +1425,8 @@
   $('btn-keys-reset').addEventListener('click', function () {
     OPT.keys = DEFAULT_KEYS.slice();
     save('ra_keys', OPT.keys);
+    OPT.gamepad = DEFAULT_GAMEPAD.slice();
+    save('ra_gamepad', OPT.gamepad);
     listening = -1;
     renderKeyList();
     toast('Controles restaurados', 'ok');
