@@ -133,6 +133,10 @@
 
   function showScreen(name) {
     SCREENS.forEach(function (k) { $('screen-' + k).classList.toggle('active', k === name); });
+    
+    var bg3d = $('bg-3d');
+    if (bg3d) bg3d.classList.toggle('hidden', name !== 'game');
+    
     if (name === 'game') resizeCanvas();
     if (name === 'characters') renderCharacterGrid();
     if (name === 'solo') drawSoloPreview();
@@ -665,9 +669,9 @@
         ? (G.dead ? 'miss' : (performance.now() - G.lastHitAt < 260 ? 'play' : (G.combo > 0 ? 'play' : 'idle')))
         : (peer && peer.dead ? 'miss' : 'play');
       var energy = m.me ? Math.min(1, 0.25 + G.combo / 40) : 0.6;
-      RC.drawCharacter(c, RC.get(m.character), x, floorY + height * 0.08, height, {
-        t: t, energy: energy, state: state
-      });
+      // RC.drawCharacter(c, RC.get(m.character), x, floorY + height * 0.08, height, {
+      //   t: t, energy: energy, state: state
+      // });
       c.fillStyle = m.me ? '#ffd400' : 'rgba(255,255,255,.75)';
       c.font = '700 11px ' + fontFamily;
       c.textAlign = 'center';
@@ -789,12 +793,7 @@
       
       c.restore();
 
-      c.fillStyle = hexA('#ffffff', 0.5 + fl * 0.5);
-      c.font = '700 ' + Math.max(11, Math.min(16, pr.w * 0.28)) + 'px ' + fontFamily;
-      c.textAlign = 'center'; c.textBaseline = 'middle';
-      var text = keyLabel(OPT.keys[i]);
-      if (OPT.gamepad[i] != null) text += ' / ' + padLabel(OPT.gamepad[i]);
-      c.fillText(text, nx, pr.y);
+
     }
 
     var endIndex = G.cursor;
@@ -1122,6 +1121,14 @@
     showScreen('game');
     resizeCanvas();
 
+    if (window.R3D) {
+      var members = [{ name: S.name || 'Tú', character: S.characterId || 'player', me: true }];
+      Object.keys(G.peers || {}).forEach(function (k) {
+        members.push({ name: G.peers[k].name, character: G.peers[k].characterId || 'player', me: false });
+      });
+      R3D.setCharacters(members);
+    }
+
     $('game-song').textContent = S.songName || 'Canción';
     $('game-diff').textContent = diffLabel(S.difficulty) + ' · ' + G.lanes + ' carriles · ' +
       S.beatmap.length + ' notas' + (S.bpm ? ' · ' + S.bpm + ' BPM' : '');
@@ -1247,7 +1254,7 @@
       (data.noteCount ? ' · ' + data.noteCount + ' notas' : '') +
       (data.bpm ? ' · ' + data.bpm + ' BPM' : '');
 
-    var medals = ['🥇', '🥈', '🥉', '4º'];
+    var medals = ['1º', '2º', '3º', '4º'];
     var podium = $('podium');
     podium.innerHTML = '';
     data.ranking.slice(0, 4).forEach(function (p, i) {
@@ -1265,7 +1272,7 @@
       card.appendChild(cv);
       var info = document.createElement('div');
       info.innerHTML =
-        '<div class="medal">' + (data.ranking.length > 1 ? medals[i] : '🎸') + '</div>' +
+        '<div class="medal">' + (data.ranking.length > 1 ? medals[i] : '1º') + '</div>' +
         '<div class="podium-name">' + esc(p.name) + (p.id === S.youId ? ' (tú)' : '') + '</div>' +
         '<div class="podium-score">' + fmt(p.score) + '</div>' +
         '<div class="podium-sub">' + (p.dead ? 'Eliminado · ' : '') + 'Combo x' + p.maxCombo + ' · ' + p.accuracy + '%</div>';
@@ -1837,7 +1844,8 @@
   });
 
   /* ------------------------------- arranque ---------------------------- */
-
+  
+  if (window.R3D) R3D.init();
   $('menu-char-name').textContent = RC.get(S.characterId).name;
   renderKeyList();
   resizeCanvas();
