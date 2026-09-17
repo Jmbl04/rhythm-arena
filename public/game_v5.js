@@ -448,9 +448,11 @@
     room.players.forEach(function (p) {
       var ch = RC.get(p.character);
       var li = document.createElement('li');
-      var cv = document.createElement('canvas');
-      cv.width = 46; cv.height = 52;
-      li.appendChild(cv);
+      var img = document.createElement('img');
+      img.width = 46; img.height = 52;
+      var chIndex = RC.ROSTER.findIndex(function(c) { return c.id === ch.id; }) + 1;
+      img.src = 'assets/Persojanes/' + chIndex + '.png';
+      li.appendChild(img);
       var info = document.createElement('span');
       info.className = 'p-name';
       info.innerHTML = esc(p.name) + '<small>' + esc(ch.name) + ' · ' + esc(ch.role) + '</small>';
@@ -458,7 +460,6 @@
       if (p.isHost) li.insertAdjacentHTML('beforeend', '<span class="tag host">Anfitrión</span>');
       if (p.id === S.youId) li.insertAdjacentHTML('beforeend', '<span class="tag you">Tú</span>');
       list.appendChild(li);
-      RC.drawPortrait(cv.getContext('2d'), ch, cv.width, cv.height, 0, { full: true, energy: 0.4 });
     });
 
     $('host-controls').classList.toggle('hidden', !S.isHost);

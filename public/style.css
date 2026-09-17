@@ -252,7 +252,7 @@ kbd {
   display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px;
   background: rgba(255, 255, 255, .05); border: 1px solid var(--panel-line);
 }
-.player-list canvas { border-radius: 10px; background: #0b0813; flex: none; }
+.player-list canvas, .player-list img { border-radius: 10px; background: #0b0813; flex: none; object-fit: contain; }
 .p-name { font-weight: 700; flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .p-name small { display: block; font-weight: 400; font-size: 11px; color: var(--muted); }
 .tag { font-size: 10px; letter-spacing: .12em; text-transform: uppercase; padding: 3px 8px; border-radius: 999px; border: 1px solid var(--panel-line); color: var(--muted); }
